@@ -177,8 +177,8 @@ export default function TankSelector() {
           />
           <label
             htmlFor="isPremium"
-            className="select-none cursor-pointer rounded-lg border-2 bg-geeky-blue 
-   py-3 px-6 font-bold text-white transition-colors duration-200 ease-in-out peer-checked:bg-dark-bg peer-checked:text-white peer-checked:bg-geeky-blue  "
+            className="select-none cursor-pointer rounded border-2 bg-geeky-blue 
+            py-2 px-4 text-white transition-colors duration-200 ease-in-out peer-checked:bg-dark-bg peer-checked:text-white peer-checked:bg-geeky-blue  "
           >
             Premium
           </label>
