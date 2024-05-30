@@ -185,7 +185,7 @@ export default function TankSelector() {
         </div>
 
         <div className="mt-2">
-          <span className="block text-slate-800">Select Tiers:</span>
+          <span className="block text-geeky-blue">Select Tiers:</span>
           <CheckboxGroup
             options={filters.tiers}
             selectedOptions={selectedTiers}
@@ -193,7 +193,7 @@ export default function TankSelector() {
           />
         </div>
         <div className="mt-2">
-          <span className="block text-slate-800">Select Nations:</span>
+          <span className="block text-geeky-blue">Select Nations:</span>
           <CheckboxGroup
             options={filters.nations}
             selectedOptions={selectedNations}
@@ -201,7 +201,7 @@ export default function TankSelector() {
           />
         </div>
         <div className="mt-2">
-          <span className="block text-slate-800">Select Types:</span>
+          <span className="block text-geeky-blue">Select Types:</span>
           <CheckboxGroup
             options={filters.types}
             selectedOptions={selectedTypes}
