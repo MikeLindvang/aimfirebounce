@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import CheckboxGroup from './CheckboxGroup'; // Adjust the path if needed
 
 const servers = [
   { name: 'North America', value: 'na' },
@@ -31,9 +32,9 @@ export default function TankSelector() {
   const [tanks, setTanks] = useState([]);
   const [filteredTanks, setFilteredTanks] = useState([]);
   const [error, setError] = useState(null);
-  const [selectedTier, setSelectedTier] = useState('');
-  const [selectedNation, setSelectedNation] = useState('');
-  const [selectedType, setSelectedType] = useState('');
+  const [selectedTiers, setSelectedTiers] = useState([]);
+  const [selectedNations, setSelectedNations] = useState([]);
+  const [selectedTypes, setSelectedTypes] = useState([]);
   const [isPremium, setIsPremium] = useState(false);
   const [blacklist, setBlacklist] = useState([]);
   const [randomTank, setRandomTank] = useState(null);
@@ -55,17 +56,25 @@ export default function TankSelector() {
   useEffect(() => {
     const newFilteredTanks = tanks.filter((tank) => {
       if (blacklist.includes(tank.tank_id)) return false;
-      if (selectedTier && tank.tier !== Number(selectedTier)) return false;
-
-      if (selectedNation && tank.nation !== selectedNation) return false;
-      if (selectedType && tank.type !== selectedType) return false;
+      if (selectedTiers.length > 0 && !selectedTiers.includes(tank.tier))
+        return false;
+      if (selectedNations.length > 0 && !selectedNations.includes(tank.nation))
+        return false;
+      if (selectedTypes.length > 0 && !selectedTypes.includes(tank.type))
+        return false;
       if (isPremium && !tank.is_premium) return false;
-
       return true;
     });
 
     setFilteredTanks(newFilteredTanks);
-  }, [tanks, selectedTier, selectedNation, selectedType, isPremium, blacklist]);
+  }, [
+    tanks,
+    selectedTiers,
+    selectedNations,
+    selectedTypes,
+    isPremium,
+    blacklist,
+  ]);
 
   const fetchTanks = async () => {
     setError(null);
@@ -158,54 +167,47 @@ export default function TankSelector() {
         </button>
       </div>
       <div className="mb-4">
-        <label>
+        <div className="flex">
           <input
             type="checkbox"
+            id="isPremium"
             checked={isPremium}
             onChange={(e) => setIsPremium(e.target.checked)}
+            className="peer hidden"
           />
-          Premium
-        </label>
-        <select
-          value={selectedTier}
-          onChange={(e) => setSelectedTier(e.target.value)}
-          className="w-full p-2 border rounded text-slate-800"
-        >
-          <option value="">All Tiers</option>
-          {filters.tiers.map((tier) => (
-            <option key={tier} value={tier} className="text-slate-800">
-              {tier}
-            </option>
-          ))}
-        </select>
-        <select
-          value={selectedNation}
-          onChange={(e) => setSelectedNation(e.target.value)}
-          className="w-full p-2 border rounded text-slate-800"
-        >
-          <option value="" className="text-slate-800">
-            All Nations
-          </option>
-          {filters.nations.map((nation) => (
-            <option key={nation} value={nation} className="text-slate-800">
-              {nation}
-            </option>
-          ))}
-        </select>
-        <select
-          value={selectedType}
-          onChange={(e) => setSelectedType(e.target.value)}
-          className="w-full p-2 border rounded text-slate-800"
-        >
-          <option value="" className="text-slate-800">
-            All Types
-          </option>
-          {filters.types.map((type) => (
-            <option key={type} value={type} className="text-slate-800">
-              {type}
-            </option>
-          ))}
-        </select>
+          <label
+            htmlFor="isPremium"
+            className="select-none cursor-pointer rounded-lg border-2 bg-geeky-blue 
+   py-3 px-6 font-bold text-white transition-colors duration-200 ease-in-out peer-checked:bg-dark-bg peer-checked:text-white peer-checked:bg-geeky-blue  "
+          >
+            Premium
+          </label>
+        </div>
+
+        <div className="mt-2">
+          <span className="block text-slate-800">Select Tiers:</span>
+          <CheckboxGroup
+            options={filters.tiers}
+            selectedOptions={selectedTiers}
+            onChange={setSelectedTiers}
+          />
+        </div>
+        <div className="mt-2">
+          <span className="block text-slate-800">Select Nations:</span>
+          <CheckboxGroup
+            options={filters.nations}
+            selectedOptions={selectedNations}
+            onChange={setSelectedNations}
+          />
+        </div>
+        <div className="mt-2">
+          <span className="block text-slate-800">Select Types:</span>
+          <CheckboxGroup
+            options={filters.types}
+            selectedOptions={selectedTypes}
+            onChange={setSelectedTypes}
+          />
+        </div>
       </div>
       {error && (
         <div className="mt-4 text-center text-red-500">
