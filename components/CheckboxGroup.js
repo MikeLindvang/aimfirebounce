@@ -23,7 +23,7 @@ const CheckboxGroup = ({ options, selectedOptions, onChange }) => {
           <label
             htmlFor={option}
             className="select-none cursor-pointer rounded-lg border-2 bg-geeky-blue 
-   py-3 px-6 font-bold text-white transition-colors duration-200 ease-in-out peer-checked:bg-dark-bg peer-checked:text-white peer-checked:bg-geeky-blue  "
+   py-3 px-6 font-bold text-white transition-colors duration-200 ease-in-out peer-checked:bg-dark-bg peer-checked:text-white"
           >
             {option}
           </label>
