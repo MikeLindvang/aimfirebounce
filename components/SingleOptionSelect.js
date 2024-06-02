@@ -22,7 +22,7 @@ const SingleOptionSelect = ({
           <label
             htmlFor={option.value}
             className="select-none cursor-pointer rounded border-2 bg-dark-bg
-            py-2 px-4 text-white transition-colors duration-200 ease-in-out peer-checked:bg-geeky-blue peer-checked:text-white"
+            py-1 px-2 text-white text-sm transition-colors duration-200 ease-in-out peer-checked:bg-geeky-blue peer-checked:text-white"
           >
             {option.name}
           </label>

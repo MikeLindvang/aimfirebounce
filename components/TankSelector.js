@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import CheckboxGroup from './CheckboxGroup'; // Adjust the path if needed
 import SingleOptionSelect from './SingleOptionSelect'; // Adjust the path if needed
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSync, faTrash, faStar } from '@fortawesome/free-solid-svg-icons';
 
 const servers = [
   { name: 'North America', value: 'na' },
@@ -119,7 +121,17 @@ export default function TankSelector() {
     if (filteredTanks.length > 0) {
       const randomIndex = Math.floor(Math.random() * filteredTanks.length);
       setRandomTank(filteredTanks[randomIndex]);
-      console.log('Random Tank: ', randomTank);
+    } else {
+      setRandomTank(null);
+    }
+  };
+  const pickRandomTankInterval = () => {
+    if (filteredTanks.length > 0) {
+      const randomIndex = Math.floor(Math.random() * filteredTanks.length);
+      setRandomTank(filteredTanks[randomIndex]);
+      setTimeout(() => {
+        pickRandomTankInterval();
+      }, 120000);
     } else {
       setRandomTank(null);
     }
@@ -157,14 +169,14 @@ export default function TankSelector() {
             onClick={fetchTanks}
             className="bg-geeky-blue text-white p-2 rounded"
           >
-            Load Tanks
+            Load
           </button>
 
           <button
             onClick={handleClearData}
             className="bg-red-500 text-white p-2 rounded ml-4"
           >
-            Clear Data
+            Clear
           </button>
         </div>
       </div>
@@ -181,7 +193,7 @@ export default function TankSelector() {
           <label
             htmlFor="isPremium"
             className="select-none cursor-pointer rounded border-2 bg-dark-bg
-            py-2 px-4 text-white transition-colors duration-200 ease-in-out peer-checked:bg-geeky-blue peer-checked:text-white"
+            py-1 px-2 text-white text-sm transition-colors duration-200 ease-in-out peer-checked:bg-geeky-blue peer-checked:text-white"
           >
             Premium
           </label>
@@ -223,6 +235,12 @@ export default function TankSelector() {
           className="bg-blue-500 text-white p-2 rounded"
         >
           Pick Random Tank
+        </button>
+        <button
+          onClick={pickRandomTankInterval}
+          className="bg-blue-500 text-white ml-2 p-2 rounded"
+        >
+          Pick Random Tank Every 2 Minutes
         </button>
       </div>
       {randomTank && (
