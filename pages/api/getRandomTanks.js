@@ -1,5 +1,18 @@
 import { getAccountId } from '../../utils/getAccountId';
 
+const API_TIMEOUT = 8000; // 8 seconds, leaving 2 seconds for processing
+
+const fetchWithTimeout = async (url, options = {}) => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), API_TIMEOUT);
+  const response = await fetch(url, {
+    ...options,
+    signal: controller.signal,
+  });
+  clearTimeout(id);
+  return response;
+};
+
 const fetchTanksInBatches = async (
   accountId,
   server,
@@ -15,20 +28,20 @@ const fetchTanksInBatches = async (
     console.log('Tanks API CALL: ', tanksApiUrl);
 
     try {
-      const tanksResponse = await fetch(tanksApiUrl);
+      const tanksResponse = await fetchWithTimeout(tanksApiUrl);
 
       if (!tanksResponse.ok) {
         console.error(
           `Error fetching tanks: ${tanksResponse.status} ${tanksResponse.statusText}`
         );
-        throw new Error('Failed to fetch tanks');
+        break; // Stop fetching on error, but don't throw
       }
 
       const tanksData = await tanksResponse.json();
 
       if (tanksData.status !== 'ok') {
         console.error('API Error:', tanksData.error);
-        throw new Error(`Failed to fetch tanks: ${tanksData.error.message}`);
+        break; // Stop fetching on error, but don't throw
       }
 
       const tanks = tanksData.data[accountId];
@@ -40,7 +53,6 @@ const fetchTanksInBatches = async (
         continue;
       }
 
-      // Filter out null values and tanks without a valid tank_id
       const validTanks = tanks.filter(
         (tank) => tank && typeof tank === 'object' && 'tank_id' in tank
       );
@@ -52,9 +64,7 @@ const fetchTanksInBatches = async (
       page += 1;
     } catch (error) {
       console.error('Fetch tanks error:', error);
-      // Instead of throwing, we'll break the loop and return what we've got so far
-      console.warn('Stopping tank fetching due to error');
-      hasMoreTanks = false;
+      break; // Stop fetching on error
     }
   }
 
@@ -76,22 +86,20 @@ const fetchTankDetailsInBatches = async (
     console.log('Tankopedia API CALL: ', tankopediaApiUrl);
 
     try {
-      const tankopediaResponse = await fetch(tankopediaApiUrl);
+      const tankopediaResponse = await fetchWithTimeout(tankopediaApiUrl);
 
       if (!tankopediaResponse.ok) {
         console.error(
           `Error fetching tank details: ${tankopediaResponse.status} ${tankopediaResponse.statusText}`
         );
-        throw new Error('Failed to fetch tank details');
+        continue; // Skip this batch on error, but continue with others
       }
 
       const tankopediaData = await tankopediaResponse.json();
 
       if (tankopediaData.status !== 'ok') {
         console.error('API Error:', tankopediaData.error);
-        throw new Error(
-          `Failed to fetch tank details: ${tankopediaData.error.message}`
-        );
+        continue; // Skip this batch on error, but continue with others
       }
 
       const validTankDetails = Object.values(tankopediaData.data).filter(
@@ -100,8 +108,7 @@ const fetchTankDetailsInBatches = async (
       allTankDetails = allTankDetails.concat(validTankDetails);
     } catch (error) {
       console.error('Fetch tank details error:', error);
-      // Instead of throwing, we'll continue with the tanks we've fetched so far
-      console.warn('Continuing with partial tank details due to error');
+      // Continue with the next batch
     }
 
     // Optional delay to avoid hitting rate limits
@@ -112,19 +119,25 @@ const fetchTankDetailsInBatches = async (
 };
 
 export default async function handler(req, res) {
+  console.time('Total API Time');
   const { username, server } = req.query;
   const applicationId = process.env.NEXT_PUBLIC_WOT_APPLICATION_ID;
 
   console.log(`Received request for username: ${username}, server: ${server}`);
 
   try {
+    console.time('Get Account ID');
     const accountId = await getAccountId(username, server);
+    console.timeEnd('Get Account ID');
     console.log(`Account ID for username ${username} is ${accountId}`);
 
+    console.time('Fetch Tanks');
     const tanks = await fetchTanksInBatches(accountId, server, applicationId);
+    console.timeEnd('Fetch Tanks');
     console.log(`Fetched ${tanks.length} tanks for account ID ${accountId}`);
 
     if (tanks.length === 0) {
+      console.timeEnd('Total API Time');
       return res
         .status(404)
         .json({ message: 'No tanks found for this account' });
@@ -133,14 +146,15 @@ export default async function handler(req, res) {
     const tankIds = tanks.map((tank) => tank.tank_id).filter(Boolean);
     console.log(`Valid Tank IDs: ${tankIds.length}`);
 
+    console.time('Fetch Tank Details');
     const tankDetails = await fetchTankDetailsInBatches(
       tankIds,
       server,
       applicationId
     );
+    console.timeEnd('Fetch Tank Details');
     console.log(`Fetched details for ${tankDetails.length} tanks`);
 
-    // Filter out tanks that don't have details
     const tanksWithDetails = tanks
       .map((tank) => {
         if (!tank || typeof tank !== 'object' || !('tank_id' in tank)) {
@@ -154,19 +168,22 @@ export default async function handler(req, res) {
           console.warn(`No details found for tank_id: ${tank.tank_id}`);
           return null;
         }
-        return { ...tank, ...detail }; // Merge tank and detail objects
+        return { ...tank, ...detail };
       })
-      .filter(Boolean); // Remove null values
+      .filter(Boolean);
 
     console.log(`Final list of tanks with details: ${tanksWithDetails.length}`);
 
     if (tanksWithDetails.length === 0) {
+      console.timeEnd('Total API Time');
       return res.status(404).json({ message: 'No tank details found' });
     }
 
+    console.timeEnd('Total API Time');
     res.status(200).json(tanksWithDetails);
   } catch (error) {
     console.error('Handler error:', error);
+    console.timeEnd('Total API Time');
     res.status(500).json({ error: error.message });
   }
 }
