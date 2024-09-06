@@ -86,7 +86,7 @@ export default function TankSelector() {
         `/api/getRandomTanks?username=${username}&server=${server}`
       );
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        throw new Error('RESPONSE ERROR: ', response);
       }
       const data = await response.json();
       if (data.error) {
