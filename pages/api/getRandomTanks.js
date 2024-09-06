@@ -1,6 +1,7 @@
 import { getAccountId } from '../../utils/getAccountId';
 
 const API_TIMEOUT = 8000; // 8 seconds, leaving 2 seconds for processing
+const ITEMS_PER_CALL = 50; // Limit each call to 50 items
 
 const fetchWithTimeout = async (url, options = {}) => {
   const controller = new AbortController();
@@ -13,19 +14,14 @@ const fetchWithTimeout = async (url, options = {}) => {
   return response;
 };
 
-const fetchTanksInBatches = async (
-  accountId,
-  server,
-  applicationId,
-  batchSize = 50
-) => {
-  let page = 0;
+const fetchTanksInBatches = async (accountId, server, applicationId) => {
   let allTanks = [];
+  let page = 1;
   let hasMoreTanks = true;
 
   while (hasMoreTanks) {
-    const tanksApiUrl = `https://api.worldoftanks.${server}/wot/account/tanks/?application_id=${applicationId}&account_id=${accountId}&limit=${batchSize}&page_no=${page}`;
-    console.log('Tanks API CALL: ', tanksApiUrl);
+    const tanksApiUrl = `https://api.worldoftanks.${server}/wot/account/tanks/?application_id=${applicationId}&account_id=${accountId}&limit=${ITEMS_PER_CALL}&page_no=${page}`;
+    console.log(`Tanks API CALL (Page ${page}):`, tanksApiUrl);
 
     try {
       const tanksResponse = await fetchWithTimeout(tanksApiUrl);
@@ -34,23 +30,23 @@ const fetchTanksInBatches = async (
         console.error(
           `Error fetching tanks: ${tanksResponse.status} ${tanksResponse.statusText}`
         );
-        break; // Stop fetching on error, but don't throw
+        break;
       }
 
       const tanksData = await tanksResponse.json();
 
       if (tanksData.status !== 'ok') {
         console.error('API Error:', tanksData.error);
-        break; // Stop fetching on error, but don't throw
+        break;
       }
 
       const tanks = tanksData.data[accountId];
       if (!tanks || tanks.length === 0) {
-        console.warn(
-          `No tanks data found for account ID: ${accountId} on page ${page}`
+        console.log(
+          `No more tanks found for account ID: ${accountId} on page ${page}`
         );
         hasMoreTanks = false;
-        continue;
+        break;
       }
 
       const validTanks = tanks.filter(
@@ -60,11 +56,11 @@ const fetchTanksInBatches = async (
 
       console.log(`Fetched ${validTanks.length} valid tanks on page ${page}`);
 
-      hasMoreTanks = validTanks.length === batchSize;
+      hasMoreTanks = validTanks.length === ITEMS_PER_CALL;
       page += 1;
     } catch (error) {
       console.error('Fetch tanks error:', error);
-      break; // Stop fetching on error
+      break;
     }
   }
 
@@ -72,18 +68,16 @@ const fetchTanksInBatches = async (
   return allTanks;
 };
 
-const fetchTankDetailsInBatches = async (
-  tankIds,
-  server,
-  applicationId,
-  batchSize = 50
-) => {
+const fetchTankDetailsInBatches = async (tankIds, server, applicationId) => {
   let allTankDetails = [];
 
-  for (let i = 0; i < tankIds.length; i += batchSize) {
-    const batchIds = tankIds.slice(i, i + batchSize).join(',');
+  for (let i = 0; i < tankIds.length; i += ITEMS_PER_CALL) {
+    const batchIds = tankIds.slice(i, i + ITEMS_PER_CALL).join(',');
     const tankopediaApiUrl = `https://api.worldoftanks.${server}/wot/encyclopedia/vehicles/?application_id=${applicationId}&tank_id=${batchIds}`;
-    console.log('Tankopedia API CALL: ', tankopediaApiUrl);
+    console.log(
+      `Tankopedia API CALL (Batch ${Math.floor(i / ITEMS_PER_CALL) + 1}):`,
+      tankopediaApiUrl
+    );
 
     try {
       const tankopediaResponse = await fetchWithTimeout(tankopediaApiUrl);
@@ -92,29 +86,33 @@ const fetchTankDetailsInBatches = async (
         console.error(
           `Error fetching tank details: ${tankopediaResponse.status} ${tankopediaResponse.statusText}`
         );
-        continue; // Skip this batch on error, but continue with others
+        continue;
       }
 
       const tankopediaData = await tankopediaResponse.json();
 
       if (tankopediaData.status !== 'ok') {
         console.error('API Error:', tankopediaData.error);
-        continue; // Skip this batch on error, but continue with others
+        continue;
       }
 
       const validTankDetails = Object.values(tankopediaData.data).filter(
         (detail) => detail && typeof detail === 'object' && 'tank_id' in detail
       );
       allTankDetails = allTankDetails.concat(validTankDetails);
+
+      console.log(
+        `Fetched details for ${validTankDetails.length} tanks in this batch`
+      );
     } catch (error) {
       console.error('Fetch tank details error:', error);
-      // Continue with the next batch
     }
 
     // Optional delay to avoid hitting rate limits
     await new Promise((resolve) => setTimeout(resolve, 1000)); // 1 second delay
   }
 
+  console.log(`Total tank details fetched: ${allTankDetails.length}`);
   return allTankDetails;
 };
 
